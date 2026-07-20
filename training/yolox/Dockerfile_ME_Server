@@ -1,0 +1,57 @@
+ARG base_image=pytorch/pytorch:2.7.1-cuda12.8-cudnn9-devel
+FROM $base_image
+
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG timezone="Asia/Jerusalem"
+
+ENV TZ=$timezone
+ENV YOLOX_DATADIR=/workspace/data
+
+ENV PYTORCH_CUDA_ALLOC_CONF=expandable_segments:False
+
+
+RUN apt-get update && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone && \
+    apt-get install -y --no-install-recommends \
+        vim git wget sudo tmux \
+        build-essential \
+        libgl1 libglib2.0-0 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+
+# Install local PyTorch wheel
+COPY pytorch/*.whl /tmp/
+
+
+# Copy YOLOX from host
+RUN mkdir -p /workspace
+
+COPY YOLOX /workspace/YOLOX
+
+WORKDIR /workspace/YOLOX
+
+
+RUN mkdir -p /workspace/data
+
+
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt && \
+    pip install cython==0.29.24 'protobuf<3.21' && \
+    pip install -e . --no-build-isolation
+
+
+# Copy pretrained models
+COPY models/*.pth /workspace/YOLOX/
+
+ARG user=hailo
+ARG group=hailo
+ARG uid=1000
+ARG gid=1000
+
+RUN groupadd --gid $gid $group && \
+    adduser --uid $uid --gid $gid --shell /bin/bash --disabled-password --gecos "" $user && \
+    chmod u+w /etc/sudoers && echo "$user ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers && chmod -w /etc/sudoers && \
+    chown -R $user:$group /workspace
