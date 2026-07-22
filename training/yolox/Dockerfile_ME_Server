@@ -23,28 +23,27 @@ RUN apt-get update && \
 
 
 # Install local PyTorch wheel
-COPY pytorch/*.whl /tmp/
+# COPY pytorch/*.whl /tmp/
 
-
-# Copy YOLOX from host
-RUN mkdir -p /workspace
-
-COPY YOLOX /workspace/YOLOX
-
-WORKDIR /workspace/YOLOX
-
-
-RUN mkdir -p /workspace/data
-
-
-RUN pip install --upgrade pip && \
+ARG repo=https://github.com/hailo-ai/YOLOX
+RUN mkdir /workspace/data && \
+    git clone $repo && \
+    cd YOLOX && pip install --upgrade pip && \
+    sed -i '/^torch/d' requirements.txt && \
+    sed -i '/^onnx/d' requirements.txt && \
+    sed -i '/^onnxruntime/d' requirements.txt && \
+    sed -i 's/^numpy==.*/numpy<2/' requirements.txt && \
     pip install -r requirements.txt && \
     pip install cython==0.29.24 'protobuf<3.21' && \
     pip install -e . --no-build-isolation
+ENV YOLOX_DATADIR=/workspace/data
 
+WORKDIR /workspace/YOLOX
 
-# Copy pretrained models
-COPY models/*.pth /workspace/YOLOX/
+RUN wget https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_s.pth && \
+    wget https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_m.pth && \
+    wget https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_l.pth && \
+    wget https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_x.pth
 
 ARG user=hailo
 ARG group=hailo

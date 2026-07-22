@@ -14,9 +14,9 @@ What this script does:
 
 Typical usage:
         python analyze_yolox_results.py \
-                --results-dir /data/GERALD/results_yolox_test \
-                --ann-file /data/GERALD/annotations/instances_test2017.json \
-                --dataset-dir /data/GERALD
+                --results-dir /home/amo/zeus-training/results_yolox_test \
+                --ann-file /home/amo/zeus-training/master_thesis/data/GERALD/split_dataset/annotations/instances_test2017.json \
+                --dataset-dir /home/amo/zeus-training/master_thesis/data/GERALD
 
 Notes:
 - If `--dataset-dir` is omitted, `findings.md` is written to the parent of
@@ -38,9 +38,9 @@ def parse_args():
         epilog=(
             "Example:\n"
             "  python analyze_yolox_results.py "
-            "--results-dir /data/GERALD/results_yolox_test "
-            "--ann-file /data/GERALD/annotations/instances_test2017.json "
-            "--dataset-dir /data/GERALD"
+            "--results-dir /home/amo/zeus-training/results_yolox_test "
+            "--ann-file /home/amo/zeus-training/master_thesis/data/GERALD/split_dataset/annotations/instances_test2017.json "
+            "--dataset-dir /home/amo/zeus-training/master_thesis/data/GERALD"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )

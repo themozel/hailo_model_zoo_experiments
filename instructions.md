@@ -75,6 +75,8 @@ Expected result:
 - CUDA True
 - GPU name contains RTX 4070 SUPER
 
+### Import torchvision missing in /workspace/YOLOX/yolox/utils/boxes.py 
+
 ## 5. Create custom YOLOX experiment file
 
 Inside container from `/workspace/YOLOX`:
