@@ -42,6 +42,9 @@ ENV YOLOX_DATADIR=/workspace/data
 
 WORKDIR /workspace/YOLOX
 
+# Custom per-dataset training and export exp files (build context must contain custom_training_scripts/)
+COPY custom_training_scripts/*.py exps/default/
+
 RUN wget https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_s.pth && \
     wget https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_m.pth && \
     wget https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_l.pth && \
