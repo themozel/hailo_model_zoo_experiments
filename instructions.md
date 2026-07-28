@@ -1,9 +1,22 @@
 # YOLOX Training — Build & Run
 
+Expected folder layout (this file's directory):
+
+```
+train/
+├── Dockerfile_ME_Server
+├── custom_training_scripts/
+│   └── yolox_{s,m,l,x}_leaky_zeus[_export].py
+└── instructions.md
+```
+
 ## 1. Build the image
 
+Build from inside this folder so `custom_training_scripts/` is part of the
+build context — the Dockerfile copies those exp files into the image:
+
 ```bash
-cd /home/amo/zeus-training/hailo_model_zoo/training/yolox
+cd /path/to/train
 sudo docker build -f Dockerfile_ME_Server --build-arg timezone=`cat /etc/timezone` -t yolox:v0 .
 ```
 
@@ -22,21 +35,11 @@ them under `/data/<dataset_name>` inside the container.
 
 If `yolox_training` already exists: `sudo docker rm -f yolox_training` first.
 
-## 3. Copy in the experiment files
+The exp files from `custom_training_scripts/` are already in the image at
+`exps/default/` (copied in during build — see §1), so nothing else needs to
+be copied in after the container starts.
 
-The image doesn't include these — copy them from the host (run from
-`/home/amo/zeus-training`):
-
-```bash
-for m in s m l x; do
-  docker cp hailo_model_zoo/custom_training_scripts/yolox_${m}_leaky_zeus.py \
-    yolox_training:/workspace/YOLOX/exps/default/yolox_${m}_leaky_zeus.py
-  docker cp hailo_model_zoo/custom_training_scripts/yolox_${m}_leaky_zeus_export.py \
-    yolox_training:/workspace/YOLOX/exps/default/yolox_${m}_leaky_zeus_export.py
-done
-```
-
-## 4. Set the dataset in the exp file
+## 3. Set the dataset in the exp file
 
 Inside the container, edit `exps/default/yolox_{s,m,l,x}_leaky_zeus.py`:
 
@@ -58,7 +61,11 @@ Inside the container, edit `exps/default/yolox_{s,m,l,x}_leaky_zeus.py`:
 before training. Mixing up values left over from a previous dataset will
 silently train/evaluate against the wrong class count.
 
-## 5. Train
+This edit only affects the running container. If you want it to persist into
+future containers, edit the matching file in `custom_training_scripts/` on
+the host and rebuild the image (§1).
+
+## 4. Train
 
 ```bash
 cd /data/<dataset_name>
