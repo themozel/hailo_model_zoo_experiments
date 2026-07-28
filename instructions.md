@@ -4,7 +4,7 @@ Expected folder layout (this file's directory):
 
 ```
 train/
-├── Dockerfile_ME_Server
+├── Dockerfile_<system_name>
 ├── custom_training_scripts/
 │   └── yolox_{s,m,l,x}_leaky_zeus[_export].py
 └── instructions.md
@@ -70,7 +70,7 @@ the host and rebuild the image (§1).
 ```bash
 cd /data/<dataset_name>
 python /workspace/YOLOX/tools/train.py -f /workspace/YOLOX/exps/default/yolox_s_leaky_zeus.py \
-  -d 1 -b 64 --fp16 -c /workspace/YOLOX/yolox_s.pth
+  -d 1 -b 64 --fp16 --cache -c /workspace/YOLOX/yolox_s.pth
 ```
 
 Swap `s` for `m`/`l`/`x` (exp file and `-c yolox_{m,l,x}.pth` both change).
