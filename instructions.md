@@ -1,253 +1,219 @@
-# YOLOX Retraining Reproduction Instructions
+# YOLOX Retraining & Hailo Export — Reproduction Notes
 
-This file documents exactly what was done, in order, so you can repeat the same process.
+This documents the actual working setup for retraining YOLOX on the GERALD /
+Percept signal-detection datasets and exporting to Hailo `.hef`. It reflects
+what is verified to work on this machine now, not the exploratory dead ends
+that came before it.
 
-## 1. Prepare and verify paths
+## 1. Paths
 
-1. Use this repository root:
-   - `/home/themozel/Projects/master_thesis/hailo_model_zoo`
-2. Use this dataset path (already converted to COCO format):
-   - `/home/themozel/Projects/master_thesis/signal_detection/data/PERCEPT/images_coco`
-3. Confirm the dataset has:
-   - `annotations/instances_train2017.json`
-   - `annotations/instances_val2017.json`
-   - `annotations/instances_test2017.json`
-   - `train2017/`, `val2017/`, `test2017/`
+- Repo root: `/home/amo/zeus-training/hailo_model_zoo`
+- Datasets (COCO-format), both under one directory so a single bind mount covers them:
+  - `/home/amo/zeus-training/master_thesis/data/GERALD` — 60 classes
+  - `/home/amo/zeus-training/master_thesis/data/percept` — 33 classes
+- Each dataset dir has: `annotations/instances_{train,val,test}2017.json`, `images/`, `labels/`, `classes.txt`, `data.yaml`.
 
-## 2. Build Docker image (with Python 3.11 compatibility fixes)
+## 2. Build the Docker image
 
-The final working Dockerfile is at:
-- `training/yolox/Dockerfile`
+The Dockerfile committed at `training/yolox/Dockerfile` is still the
+**unmodified upstream Hailo file** (base `nvcr.io/nvidia/pytorch:21.10-py3`).
+That is not what actually produced the `yolox:v0` image in use — the image
+history shows it was built from a modified Dockerfile with these changes on
+top of the stock one:
 
-Important changes that were required:
+1. Base image: `pytorch/pytorch:2.7.1-cuda12.8-cudnn9-devel` (needed for the
+   RTX PRO 6000 Blackwell GPU on this machine — the stock `nvcr.io` 21.10 base
+   is too old to support it).
+2. `apt-get install` list extended with `libgl1 libglib2.0-0` (avoids
+   OpenCV's `ImportError: libGL.so.1: cannot open shared object file`).
+3. Before `pip install -r requirements.txt` on the cloned `hailo-ai/YOLOX`
+   repo:
+   - `pip install --upgrade pip`
+   - `sed -i '/^torch/d' requirements.txt`
+   - `sed -i '/^onnx/d' requirements.txt`
+   - `sed -i '/^onnxruntime/d' requirements.txt`
+   - `sed -i 's/^numpy==.*/numpy<2/' requirements.txt`
+4. After the requirements install: `pip install cython==0.29.24 'protobuf<3.21'`
+   (avoids `TypeError: Descriptors cannot be created directly` from a
+   tensorboard/protobuf version clash).
+5. `pip install -e . --no-build-isolation` (build isolation must be off so
+   YOLOX's `setup.py` sees the base image's preinstalled torch).
 
-1. Base image changed to:
-   - `pytorch/pytorch:2.7.1-cuda11.8-cudnn9-devel`
-2. During YOLOX requirements install, these pins were removed/adjusted:
-   - Remove `torch` line from YOLOX `requirements.txt`
-   - Remove `onnx` line
-   - Remove `onnxruntime` line
-   - Replace pinned `numpy==1.21.2` with unpinned `numpy`
+**Known gap:** `training/yolox/Dockerfile` in git needs these changes applied
+before a fresh `docker build` will reproduce the current environment. Until
+that's done, don't trust `docker build` from the committed file alone.
 
-Exact build command used:
+Build command (once the Dockerfile above is in place):
 
 ```bash
-cd /home/themozel/Projects/master_thesis/hailo_model_zoo/training/yolox
+cd /home/amo/zeus-training/hailo_model_zoo/training/yolox
 sudo docker build --build-arg timezone=`cat /etc/timezone` -t yolox:v0 .
 ```
 
-Expected successful end:
+## 3. Run the container
 
-```text
-Successfully built <image_id>
-Successfully tagged yolox:v0
-```
-
-## 3. Run container with GPU + mounted dataset
-
-Command used:
+One bind mount covers both datasets:
 
 ```bash
-sudo docker run --name "zeus_training" -it --gpus all --ipc=host \
-  -v /home/amo/zeus-training/master_thesis/data/GERALD:/data/GERALD \
+sudo docker run --name yolox_training -it --gpus all --ipc=host \
+  -v /home/amo/zeus-training/master_thesis/data:/data \
   yolox:v0
 ```
 
-If container name already exists, remove and rerun:
+Inside the container this gives `/data/GERALD` and `/data/percept`.
+
+If a container named `yolox_training` already exists:
 
 ```bash
-sudo docker rm yolox_training
-sudo docker run --name "yolox_training" -it --gpus all --ipc=host \
-  -v /home/amo/zeus-training/master_thesis/data/GERALD:/data/GERALD \
-  yolox:v0
+sudo docker rm -f yolox_training
+# then re-run the docker run command above
 ```
 
-## 4. Verify GPU inside container
-
-Inside container:
+## 4. Verify GPU inside the container
 
 ```bash
 python -c "import torch; print(f'PyTorch {torch.__version__}, CUDA: {torch.cuda.is_available()}, GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else None}')"
 ```
 
-Expected result:
-- PyTorch 2.7.1+cu118
-- CUDA True
-- GPU name contains RTX 4070 SUPER
+Expected: `PyTorch 2.7.1+cu128`, `CUDA: True`, GPU name contains `RTX PRO 6000 Blackwell`.
 
-### Import torchvision missing in /workspace/YOLOX/yolox/utils/boxes.py 
+## 5. One-time repo patch (already applied in the current image/container)
 
-## 5. Create custom YOLOX experiment file
-
-Inside container from `/workspace/YOLOX`:
+`yolox/data/datasets/coco.py` loads images from `<data_dir>/<split_name>/` by
+default. This dataset layout instead uses a flat `images/` dir, so:
 
 ```bash
-cp exps/default/yolox_s_leaky.py exps/default/yolox_s_signal.py
+sed -i 's|img_file = os.path.join(self.data_dir, self.name, file_name)|img_file = os.path.join(self.data_dir, "images", file_name)|' \
+  /workspace/YOLOX/yolox/data/datasets/coco.py
 ```
 
-The copied file was short/minimal and then these lines were appended:
+Verify: `grep -A3 "def load_image" /workspace/YOLOX/yolox/data/datasets/coco.py`
+
+If you rebuild from a fresh container this needs to be re-applied (or baked
+into the Dockerfile as a `RUN sed -i ...` step).
+
+## 6. Create/edit the experiment file
+
+Per model size, `exps/default/yolox_{s,m,l,x}_leaky_zeus.py` is a copy of the
+matching stock `yolox_{s,m,l,x}_leaky.py` template with a dataset config block
+appended. Host-side backups of these live in
+`hailo_model_zoo/custom_training_scripts/`. Pattern (from the `s` model):
 
 ```python
-        # Custom signal detection dataset config
-        self.num_classes = 4
-        self.data_dir = '/data/images_coco'
-        self.train_ann = 'instances_train2017.json'
-        self.val_ann = 'instances_val2017.json'
-        self.test_ann = 'instances_test2017.json'
+        # Dataset configuration
+        self.data_dir = "/data/GERALD/"
+        self.train_ann = "instances_train2017.json"
+        self.val_ann = "instances_val2017.json"
+        self.test_ann = "instances_test2017.json"
+        # GERALD dataset images are 1920x1080 (16:9, some 1280x720)
+        self.input_size = (640, 1152)  # (height, width), both dims multiples of 32
+        self.test_size = (640, 1152)
+        self.num_classes = 60
+        self.data_num_workers = 4
+
+        # --------------  training config --------------------- #
+        self.warmup_epochs = 5
+        self.max_epoch = 200
 ```
 
-How this was appended:
+**Switching dataset**: GERALD is 60 classes at 1920x1080 (use `input_size =
+(640, 1152)`); Percept is **33 classes** at 1280x736 (use `input_size = (736,
+992)`). `num_classes` and `input_size`/`test_size` must change together — an
+exp file pointed at `/data/percept/` with `num_classes = 60` left over from a
+GERALD run is wrong (percept only has 33 classes in `classes.txt`) and will
+silently train/evaluate against the wrong class count.
 
-```bash
-cat >> exps/default/yolox_s_signal.py << 'EOF'
-        # Custom signal detection dataset config
-        self.num_classes = 4
-        self.data_dir = '/data/GERALD/split_dataset'
-        self.train_ann = 'instances_train2017.json'
-        self.val_ann = 'instances_val2017.json'
-        self.test_ann = 'instances_test2017.json'
-EOF
-```
+Verify: `cat exps/default/yolox_s_leaky_zeus.py`
 
-Verify config content:
-
-```bash
-cat exps/default/yolox_s_signal.py
-```
-
-Make the coco.py file read from the data folder (yolo) instead of train2017, ...:
-```bash
-sed -i 's|img_file = os.path.join(self.data_dir, self.name, file_name)|img_file = os.path.join(self.data_dir, "images", file_name)|' /workspace/YOLOX/yolox/data/datasets/coco.py
-```
-Verify the change:
-```bash
-grep -A3 "def load_image" /workspace/YOLOX/yolox/data/datasets/coco.py
-```
-
-## 6. Fix runtime environment inside container (required)
-
-Several runtime issues appeared and were fixed in this order.
-
-### 6.1 Install YOLOX package editable
-
-```bash
-pip install -e . --no-build-isolation
-```
-
-### 6.2 Fix missing system libraries for OpenCV
-
-Error seen:
-- `ImportError: libGL.so.1: cannot open shared object file`
-
-Fix:
-
-```bash
-apt-get update && apt-get install -y libgl1 libglib2.0-0
-```
-
-### 6.3 Fix protobuf/tensorboard incompatibility
-
-Error seen:
-- `TypeError: Descriptors cannot be created directly`
-
-Fix:
-
-```bash
-pip install "protobuf<3.21"
-```
-
-### 6.4 Fix NumPy/TensorBoard incompatibility
-
-Error seen:
-- `AttributeError: module 'numpy' has no attribute 'bool8'`
-
-Fix:
-
-```bash
-pip install "numpy<2"
-```
-
-### 6.5 Fix OpenCV ABI mismatch after NumPy changes
-
-Error seen earlier:
-- `numpy.core.multiarray failed to import`
-
-Fix used:
-
-```bash
-pip install --upgrade opencv-python
-```
-
-Note: This produced a YOLOX requirement warning (opencv pinned in setup), but training proceeded successfully afterward.
-
-## 7. Start training
-
-Inside container:
+## 7. Train
 
 ```bash
 python tools/train.py -f exps/default/yolox_s_leaky_zeus.py -d 1 -b 64 --fp16 -c yolox_s.pth
 ```
 
-## 8. What successful start looked like
+Swap `s` for `m`/`l`/`x` (exp file and `-c yolox_{m,l,x}.pth` both change;
+`yolox_{s,m,l,x}.pth` pretrained weights are already in `/workspace/YOLOX/`
+from the Docker build).
 
-The run reached these key milestones:
+## 8. What a successful start looks like
 
-1. Trainer argument print with `experiment_name='yolox_s_leaky_zeus'`
-2. Config table shows:
-   - `num_classes = 4`
-   - `data_dir = '/data/images_coco'`
-   - `train_ann = 'instances_train2017.json'`
-   - `val_ann = 'instances_val2017.json'`
-3. Model summary printed
-4. Pretrained checkpoint loaded (with expected class-head shape warnings)
-5. COCO annotations loaded and indexed
-6. Prefetcher initialized
+1. Trainer argument print with the matching `experiment_name`.
+2. Config table shows the `num_classes`, `data_dir`, `train_ann`, `val_ann` you expect.
+3. Model summary printed.
+4. Pretrained checkpoint loaded (class-head shape warnings are expected —
+   going from 80 COCO classes to 60/33 custom classes).
+5. COCO annotations loaded and indexed, prefetcher initialized.
 
-At that point training was running.
+## 9. Persisting checkpoints across container restarts (important)
 
-## 9. Important notes from the actual run
+`tools/train.py` writes checkpoints to `./YOLOX_outputs/<exp_name>/`,
+**relative to the current working directory**, not to `/data`. If you launch
+training from `/workspace/YOLOX` (the container's default `WORKDIR`), outputs
+land in the container's writable layer and are **lost if the container is
+removed**.
 
-1. The class-head mismatch warnings when loading `yolox_s.pth` are expected when changing from 80 classes to 4 classes.
-2. Sudo prompts can pause commands in non-interactive contexts. If a command appears stuck, check whether a password prompt is waiting.
-3. Reusing a container name causes Docker conflict error 125. Remove old container first.
-
-## 10. Optional: commands to continue later
-
-If you stop and want to continue with a fresh container:
+To keep checkpoints on the host through the `/data` bind mount, `cd` into the
+mounted dataset dir first and reference the exp file by full path:
 
 ```bash
-sudo docker rm -f yolox_training 2>/dev/null || true
-sudo docker run --name "yolox_training" -it --gpus all --ipc=host \
-  -v /home/themozel/Projects/master_thesis/signal_detection/data/PERCEPT/images_coco:/data/images_coco \
-  yolox:v0
+cd /data/GERALD
+python /workspace/YOLOX/tools/train.py -f /workspace/YOLOX/exps/default/yolox_s_leaky_zeus.py \
+  -d 1 -b 64 --fp16 -c /workspace/YOLOX/yolox_s.pth
 ```
 
-Then re-run sections 5, 6, and 7 inside the container.
+This is how the completed GERALD runs (`/data/GERALD/YOLOX_outputs/yolox_{s,m,l,x}_leaky_zeus/`,
+each with `best_ckpt.pth` and tfevents) ended up persisted on the host.
 
-## 11. Inference
+## 10. Evaluate a checkpoint
 
-### Inference using eval script from yolox:
 ```bash
-python tools/eval.py -f exps/default/yolox_s_leaky_zeus_gerald.py \
-  -c /home/amo/zeus-training/master_thesis/data/GERALD/YOLOX_outputs/yolox_s_leaky_zeus/best_ckpt.pth \
+python tools/eval.py -f exps/default/yolox_s_leaky_zeus.py \
+  -c /data/GERALD/YOLOX_outputs/yolox_s_leaky_zeus/best_ckpt.pth \
   -b 32 -d 1 --test
 ```
 
-1. From outside of the container copy the yolox_infer_eval.py to the container
+Point `-f`/`-c` at whichever exp file and checkpoint match the model/dataset
+you're evaluating.
+
+## 11. Export to ONNX and compile to HEF
+
+Export uses a separate, minimal exp file per size
+(`exps/default/yolox_{s,m,l,x}_leaky_zeus_export.py` — same
+depth/width/activation/num_classes as the training exp file, but a fixed
+export `input_size`/`test_size`, no dataset config):
+
 ```bash
-docker cp /home/ubuntu2404/mee119/hailo_model_zoo/yolox_infer_eval.py yolox_training:/workspace/YOLOX/exps/default/yolox_infer_eval.py
+python tools/export_onnx.py --output-name yolox_s_leaky_zeus.onnx \
+  -f exps/default/yolox_s_leaky_zeus_export.py \
+  -c /data/GERALD/YOLOX_outputs/yolox_s_leaky_zeus/best_ckpt.pth
 ```
 
-2. Run the inference script:
-```bash
-python exps/default/yolox_infer_eval.py   \
-   --exp-file exps/default/yolox_s_signal.py   \
-   --ckpt YOLOX_outputs/yolox_s_signal/best_ckpt.pth   \
-   --input-dir /data/images_coco/test2017   \
-   --ann-file /data/images_coco/annotations/instances_test2017.json   \
-   --output-dir /data/images_coco/results_yolox_test   \
-   --conf 0.25   \
-   --nms 0.65   \
-   --tsize 640   \
-   --device cuda
-```
+Compiling the ONNX to `.hef` for Hailo-8/8L needs the proprietary Hailo
+Dataflow Compiler and the `hailomz` CLI from a `hailo_model_zoo` checkout on
+the `hailo8-migration` branch (the mainline branch only targets
+Hailo-10H/15H/15L). The network/`.alls`/NMS-config files for all four sizes
+already exist under `hailo_model_zoo/cfg/`.
+
+**Full step-by-step status, the exact `hailomz compile` command, and the
+open questions around NMS layer names for the `m`/`x` configs are documented
+in `training/YOLOX_outputs/hef_compiled/STATUS.md` under `master_thesis/data/GERALD/`
+— read that instead of duplicating it here, since it's the live record of
+what's done vs. still blocked for this step.**
+
+## 12. Known gaps
+
+- `training/yolox/Dockerfile` in git doesn't match the image actually in use (see §2).
+- The `yolox_infer_eval.py` script previously used for batch inference +
+  metrics (`results_yolox_test_{s,m}/metrics_report.json` under
+  `master_thesis/inference_results/`) is no longer present anywhere on this
+  machine. Locate/restore it before repeating that step — `tools/eval.py`
+  (§10) still works for COCO-style mAP, but per-class/latency reporting used
+  that missing script.
+
+## 13. General notes
+
+- `sudo` prompts can silently pause commands in non-interactive contexts —
+  if a command looks stuck, check for a password prompt.
+- Reusing a container name causes Docker error 125; remove the old one first (§3).
+- Class-head mismatch warnings on checkpoint load are expected whenever
+  `num_classes` differs from the pretrained weights' 80.
