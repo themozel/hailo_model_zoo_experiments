@@ -14,6 +14,9 @@ class Exp(MyExp):
         self.width = 0.75
         self.exp_name = os.path.split(os.path.realpath(__file__))[1].split(".")[0]
         self.act = 'lrelu'
+        # --------------  training config --------------------- #
+        self.warmup_epochs = 5
+        self.max_epoch = 200
         
         # ### GERALD dataset configuration
         # self.data_dir = "/data/GERALD/"
