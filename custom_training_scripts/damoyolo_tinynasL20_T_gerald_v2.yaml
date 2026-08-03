@@ -1,0 +1,29 @@
+base:
+- base/damoyolo.yaml
+network:
+  network_name: damoyolo_tinynasL20_T_gerald_v2
+paths:
+  alls_script: damoyolo_tinynasL20_T.alls
+  network_path:
+  - /home/amo/zeus-training/master_thesis/data/GERALD/DAMOYOLO_outputs/with-pre-training/hailo/damoyolo_tinynasL20_T.onnx
+parser:
+  nodes:
+  - null
+  - - /head/Softmax
+    - /head/Sigmoid
+    - /head/Softmax_1
+    - /head/Sigmoid_1
+    - /head/Softmax_2
+    - /head/Sigmoid_2
+evaluation:
+  classes: 60
+info:
+  task: object detection
+  input_shape: 640x1152x3
+  output_shape: 80x144x4x17, 80x144x61, 40x72x4x17, 40x72x61, 20x36x4x17, 20x36x61
+  operations: 32.18G
+  parameters: 8.80M
+  full_precision_result: null
+  supported_hw_arch:
+  - hailo8
+  - hailo8l

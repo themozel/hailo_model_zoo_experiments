@@ -1,0 +1,10 @@
+model_optimization_config(calibration, batch_size=2, calibset_size=64)
+input_conversion = input_conversion(bgr_to_rgb)
+post_quantization_optimization(finetune, policy=disabled)
+
+nms_postprocess("../../postprocess_config/nms_config_yolox_x_leaky_zeus.json", yolox, engine=cpu)
+
+# x is the largest of the 4 models; the allocator's default 4 parallel mapping-search
+# workers pushed this machine (23GB RAM, no swap) into 3 OOM kills during compile.
+# Dropping to 1 worker trades allocation wall-clock for peak memory.
+allocator_param(num_of_workers=1)

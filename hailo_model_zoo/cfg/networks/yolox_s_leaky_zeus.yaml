@@ -1,0 +1,38 @@
+base:
+- base/yolox.yaml
+network:
+  network_name: yolox_s_leaky_zeus
+paths:
+  network_path:
+  - /home/amo/zeus-training/master_thesis/data/GERALD/YOLOX_outputs/onnx_exports/yolox_s_leaky_zeus.onnx
+  alls_script: yolox_s_leaky_zeus.alls
+parser:
+  nodes:
+  - null
+  - - /head/reg_preds.2/Conv
+    - /head/Sigmoid_4
+    - /head/Sigmoid_5
+    - /head/reg_preds.1/Conv
+    - /head/Sigmoid_2
+    - /head/Sigmoid_3
+    - /head/reg_preds.0/Conv
+    - /head/Sigmoid
+    - /head/Sigmoid_1
+postprocessing:
+  device_pre_post_layers:
+    nms: true
+  meta_arch: yolox
+  hpp: true
+info:
+  task: object detection
+  input_shape: 640x640x3
+  output_shape: 60x5x100
+  framework: pytorch
+  training_data: GERALD (custom, 60 classes)
+  source: custom-trained yolox_s_leaky_zeus, converted from https://github.com/Megvii-BaseDetection/YOLOX
+  supported_hw_arch:
+  - hailo8
+  - hailo8l
+evaluation:
+  labels_offset: 0
+  classes: 60

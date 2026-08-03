@@ -1,0 +1,30 @@
+base:
+- base/damoyolo.yaml
+network:
+  network_name: damoyolo_tinynasL25_S
+paths:
+  alls_script: damoyolo_tinynasL25_S.alls
+  network_path:
+  - models_files/ObjectDetection/Detection-COCO/yolo/damoyolo_tinynasL25_S/pretrained/2022-12-19/damoyolo_tinynasL25_S.onnx
+  url: https://hailo-model-zoo.s3.eu-west-2.amazonaws.com/ObjectDetection/Detection-COCO/yolo/damoyolo_tinynasL25_S/pretrained/2022-12-19/damoyolo_tinynasL25_S.zip
+parser:
+  nodes:
+  - null
+  - - /head/Softmax
+    - /head/Sigmoid
+    - /head/Softmax_1
+    - /head/Sigmoid_1
+    - /head/Softmax_2
+    - /head/Sigmoid_2
+evaluation:
+  classes: 60
+info:
+  task: object detection
+  input_shape: 640x640x3
+  output_shape: 80x80x4x17, 80x80x61, 40x40x4x17, 40x40x61, 20x20x4x17, 20x20x61
+  operations: 37.64G
+  parameters: 16.25M
+  full_precision_result: 46.53
+  supported_hw_arch:
+  - hailo8
+  - hailo8l
