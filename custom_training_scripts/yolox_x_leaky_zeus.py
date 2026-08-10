@@ -29,13 +29,24 @@ class Exp(MyExp):
         # self.num_classes = 60  # Set this to the number of classes in your dataset
         # self.data_num_workers = 4
         
-        ### Percept dataset configuration
-        self.data_dir = "/data/percept/"
+        # ### Percept dataset configuration
+        # self.data_dir = "/data/percept/"
+        # self.train_ann = "instances_train2017.json"
+        # self.val_ann = "instances_val2017.json"
+        # self.test_ann = "instances_test2017.json"
+        # # Percept dataset images are 1280x736 (16:9) — use this pair instead if switching datasets
+        # self.input_size = (736, 992)  # (height, width); matches native 4:3 image aspect ratio, both dims multiples of 32
+        # self.test_size = (736, 992)
+        # self.num_classes = 34  # Set this to the number of classes in your dataset
+        # self.data_num_workers = 4
+        
+        ### Percept-cropped dataset configuration
+        self.data_dir = "/data/percept-cropped/"
         self.train_ann = "instances_train2017.json"
         self.val_ann = "instances_val2017.json"
         self.test_ann = "instances_test2017.json"
         # Percept dataset images are 1280x736 (16:9) — use this pair instead if switching datasets
-        self.input_size = (736, 992)  # (height, width); matches native 4:3 image aspect ratio, both dims multiples of 32
-        self.test_size = (736, 992)
+        self.input_size = (640, 640)  # (height, width); matches native 4:3 image aspect ratio, both dims multiples of 32
+        self.test_size = (640, 640)
         self.num_classes = 34  # Set this to the number of classes in your dataset
-        self.data_num_workers = 4
+        self.data_num_workers = 14
