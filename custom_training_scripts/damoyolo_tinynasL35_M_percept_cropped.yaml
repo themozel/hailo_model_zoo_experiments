@@ -1,0 +1,29 @@
+base:
+- base/damoyolo.yaml
+network:
+  network_name: damoyolo_tinynasL35_M
+paths:
+  alls_script: damoyolo_tinynasL35_M.alls
+  network_path:
+  - /home/amo/zeus-training/master_thesis/data/percept-cropped/damoyolo_outputs/damoyolo_tinynasL35_M/hailo/damoyolo_tinynasL35_M.onnx
+parser:
+  nodes:
+  - null
+  - - Softmax_413
+    - Sigmoid_416
+    - Softmax_453
+    - Sigmoid_456
+    - Softmax_493
+    - Sigmoid_496
+evaluation:
+  classes: 33
+info:
+  task: object detection
+  input_shape: 640x640x3
+  output_shape: 80x80x4x17, 80x80x34, 40x40x4x17, 40x40x34, 20x20x4x17, 20x20x34
+  operations: 60.70G
+  parameters: 27.81M
+  full_precision_result: null
+  supported_hw_arch:
+  - hailo8
+  - hailo8l
