@@ -1,0 +1,7 @@
+model_optimization_config(calibration, batch_size=2, calibset_size=64)
+input_conversion = input_conversion(bgr_to_rgb)
+post_quantization_optimization(finetune, policy=disabled)
+
+nms_postprocess("../../postprocess_config/nms_config_yolox_m_leaky_zeus_geraldcropped.json", yolox, engine=cpu)
+
+allocator_param(num_of_workers=1)

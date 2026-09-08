@@ -10,10 +10,10 @@ from yolox.exp import Exp as MyExp
 class Exp(MyExp):
     def __init__(self):
         super(Exp, self).__init__()
-        self.depth = 0.67
-        self.width = 0.75
+        self.depth = 1.33
+        self.width = 1.25
         self.exp_name = os.path.split(os.path.realpath(__file__))[1].split(".")[0]
-        self.act = 'lrelu'
+        self.act='lrelu'
         # --------------  training config --------------------- #
         self.warmup_epochs = 5
         self.max_epoch = 200
@@ -66,11 +66,11 @@ class Exp(MyExp):
         
         ### GERALD dataset configuration
         self.data_dir = "/data/GERALD-cropped/"
-        self.train_ann = "instances_train2017.json"
-        self.val_ann = "instances_val2017.json"
-        self.test_ann = "instances_test2017.json"
+        self.train_ann = "instances_train2017_ge129.json"
+        self.val_ann = "instances_val2017_ge129.json"
+        self.test_ann = "instances_test2017_ge129.json"
         # GERALD dataset images are 1920x1080 (16:9, some 1280x720) — use this pair instead if switching datasets
         self.input_size = (704, 704)  # (height, width); matches 16:9 aspect ratio, both dims multiples of 32
         self.test_size = (704, 704)
-        self.num_classes = 60  # Set this to the number of classes in your dataset
+        self.num_classes = 31  # GERALD-cropped classes with >=129 instances (see instances_*_ge129.json)
         self.data_num_workers = 6

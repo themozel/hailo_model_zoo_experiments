@@ -46,6 +46,26 @@ right before the closing `}` (after `coco_2017_test_dev`):
         },
 ```
 
+Add these next to the existing `gerald_cropped_coco_train`/`gerald_cropped_coco_val`
+entries (same `img_dir`, different `ann_file`) to train/eval on only the 31
+GERALD-cropped classes with >=129 instances (see
+`damoyolo_tinynasL{20_T,25_S,35_M}_ge129.py`):
+
+```python
+        'gerald_cropped_ge129_coco_train': {
+            'img_dir': '/data/GERALD-cropped/images',
+            'ann_file': '/data/GERALD-cropped/annotations/instances_train2017_ge129.json'
+        },
+        'gerald_cropped_ge129_coco_val': {
+            'img_dir': '/data/GERALD-cropped/images',
+            'ann_file': '/data/GERALD-cropped/annotations/instances_val2017_ge129.json'
+        },
+        'gerald_cropped_ge129_coco_test': {
+            'img_dir': '/data/GERALD-cropped/images',
+            'ann_file': '/data/GERALD-cropped/annotations/instances_test2017_ge129.json'
+        },
+```
+
 (`/data/GERALD`, `/data/percept` = bind-mounted
 `/home/amo/zeus-training/master_thesis/data/{GERALD,percept}`.)
 

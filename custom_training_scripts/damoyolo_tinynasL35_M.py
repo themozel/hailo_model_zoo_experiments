@@ -14,7 +14,14 @@ class Config(MyConfig):
         self.miscs.eval_interval_epochs = 10
         self.miscs.ckpt_interval_epochs = 10
         # optimizer
-        self.train.batch_size = 64
+        # batch_size=48, base_lr_per_img=0.01/64 -> effective peak LR 0.0075, deliberately matched
+        # to both YOLOX's yolox_{s,m,l,x}_leaky_zeus.py (`-b 48`) here AND to the full-frame
+        # GERALD training recipe (yolox_{s,m,l,x}_leaky_zeus and damoyolo_tinynasL{20_T,25_S,35_M}
+        # all trained at batch=48 there too, see data/GERALD/{YOLOX,DAMOYOLO}_outputs/*/train_log.txt)
+        # — so a cropped-vs-non-cropped accuracy comparison isolates cropping as the only
+        # variable. (Previously batch_size=64/peak LR 0.01, matched only within GERALD-cropped —
+        # see inference_results/yolox-vs-damoyolo-GERALD-cropped/comparison.md.)
+        self.train.batch_size = 48
         self.train.base_lr_per_img = 0.01 / 64
         self.train.min_lr_ratio = 0.05
         self.train.weight_decay = 5e-4
