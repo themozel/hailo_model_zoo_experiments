@@ -42,6 +42,9 @@ class Config(MyConfig):
         # self.train.augment.transform.image_max_range = (640, 640)
         # self.train.augment.mosaic_mixup.mosaic_size = (640, 640)   # <-- add this; default (640,640) is square
         # GERALD-cropped
+        # self.train.augment.transform.image_max_range = (704, 704)
+        # self.train.augment.mosaic_mixup.mosaic_size = (704, 704)   # <-- add this; default (640,640) is square
+        # Zeus-cropped
         self.train.augment.transform.image_max_range = (704, 704)
         self.train.augment.mosaic_mixup.mosaic_size = (704, 704)   # <-- add this; default (640,640) is square
         self.train.augment.mosaic_mixup.mixup_prob = 1.0
@@ -60,8 +63,19 @@ class Config(MyConfig):
         # self.dataset.train_ann = ('percept_cropped_coco_train', )
         # self.dataset.val_ann = ('percept_cropped_coco_val', )
         # GERALD-cropped
-        self.dataset.train_ann = ('gerald_cropped_coco_train', )
-        self.dataset.val_ann = ('gerald_cropped_coco_val', )
+        # self.dataset.train_ann = ('gerald_cropped_coco_train', )
+        # self.dataset.val_ann = ('gerald_cropped_coco_val', )
+        # Zeus-cropped
+        self.dataset.train_ann = ('zeus_cropped_coco_train', )
+        self.dataset.val_ann = ('zeus_cropped_coco_val', )
+
+        # GERALD-cropped, >=129-instance class subset (31 of 60 classes; rare classes like
+        # ICE/LZB/Lf_2 were getting near-zero/undefined AP, see
+        # inference_results/yolox-vs-damoyolo-GERALD-cropped/comparison.md). Needs
+        # gerald_cropped_ge129_coco_{train,val,test} registered in paths_catalog.py —
+        # see DAMOYOLO_KNOWN_ISSUES.md.
+        # self.dataset.train_ann = ('gerald_cropped_ge129_coco_train', )
+        # self.dataset.val_ann = ('gerald_cropped_ge129_coco_val', )
 
         # backbone
         structure = self.read_structure(
@@ -93,10 +107,14 @@ class Config(MyConfig):
 
         ZeroHead = {
             'name': 'ZeroHead',
-            # GERALD
-            'num_classes': 60,
+            # GERALD / GERALD-cropped
+            # 'num_classes': 60,
+            # GERALD-cropped, >=129-instance class subset
+            # 'num_classes': 31,
             # # Percept
             # 'num_classes': 33,
+            # Zeus-cropped
+            'num_classes': 33,
             'in_channels': [128, 256, 512],
             'stacked_convs': 0,
             'reg_max': 16,
@@ -107,7 +125,14 @@ class Config(MyConfig):
         self.model.head = ZeroHead
 
         # GERALD (60 classes)
-        self.dataset.class_names = ['El_6', 'Hectometer_Sign', 'Hp_0_HV', 'Hp_0_Ks', 'Hp_0_Sh', 'Hp_1', 'Hp_2', 'ICE', 'Ks_1', 'Ks_2', 'LZB', 'Lf_2', 'Lf_3', 'Lf_6', 'Lf_7', 'Mast_Sign_WRW', 'Mast_Sign_WYWYW', 'Mast_Sign_Y_Triangle', 'Ne_1', 'Ne_2', 'Ne_3_1', 'Ne_3_2', 'Ne_3_3', 'Ne_3_4', 'Ne_3_5', 'Ne_4', 'Ne_5', 'Ne_6', 'Ne_7a', 'Ne_7b', 'Platform_Display', 'Platform_Text_Sign', 'Platform_Track_Sign', 'Platform_Warn_Sign', 'Ra_10', 'Ride_Indicator_1', 'Ride_Indicator_Off', 'Sh_0', 'Sh_1', 'Sh_2', 'Sign_Back', 'Signal_Back', 'Signal_Identifier_Sign', 'Signal_Invalid', 'Signal_Off', 'So_20_Left', 'So_20_Right', 'Traffic_Light', 'Traffic_Sign', 'Vr_0', 'Vr_1', 'Vr_2', 'Wn_1', 'Wn_2', 'Zs_2', 'Zs_2v', 'Zs_3', 'Zs_3v', 'Zs_6', 'Zs_Off']
+        # self.dataset.class_names = ['El_6', 'Hectometer_Sign', 'Hp_0_HV', 'Hp_0_Ks', 'Hp_0_Sh', 'Hp_1', 'Hp_2', 'ICE', 'Ks_1', 'Ks_2', 'LZB', 'Lf_2', 'Lf_3', 'Lf_6', 'Lf_7', 'Mast_Sign_WRW', 'Mast_Sign_WYWYW', 'Mast_Sign_Y_Triangle', 'Ne_1', 'Ne_2', 'Ne_3_1', 'Ne_3_2', 'Ne_3_3', 'Ne_3_4', 'Ne_3_5', 'Ne_4', 'Ne_5', 'Ne_6', 'Ne_7a', 'Ne_7b', 'Platform_Display', 'Platform_Text_Sign', 'Platform_Track_Sign', 'Platform_Warn_Sign', 'Ra_10', 'Ride_Indicator_1', 'Ride_Indicator_Off', 'Sh_0', 'Sh_1', 'Sh_2', 'Sign_Back', 'Signal_Back', 'Signal_Identifier_Sign', 'Signal_Invalid', 'Signal_Off', 'So_20_Left', 'So_20_Right', 'Traffic_Light', 'Traffic_Sign', 'Vr_0', 'Vr_1', 'Vr_2', 'Wn_1', 'Wn_2', 'Zs_2', 'Zs_2v', 'Zs_3', 'Zs_3v', 'Zs_6', 'Zs_Off']
+
+        # Zeus-cropped (33 classes)
+        self.dataset.class_names = ['sig_stop', 'sig_stop_occupied', 'sig_free_straight', 'sig_free_left', 'sig_free_right', 'sig_switch_straight_locked', 'sig_switch_left_locked', 'sig_switch_right_locked', 'sig_switch_straight_free', 'sig_switch_left_free', 'sig_switch_right_free', 'sig_switch_faulty_1', 'sig_switch_faulty_2', 'sig_switch_faulty_3', 'sig_aux_arrow_right', 'sig_aux_arrow_left', 'sig_aux_arrow_right_diagonal', 'sig_aux_arrow_left_diagonal', 'sig_aux_arrow_straight', 'sig_aux_tram_num_arrow_straight', 'sig_aux_tram_num', 'sig_aux_tram_arrow_straight', 'sig_aux_tram_arrow_right', 'sig_aux_tram_arrow_left', 'sig_aux_tram_arrow_right_diagonal', 'sig_aux_tram_arrow_left_diagonal', 'sig_aux_tram', 'sig_aux_bus_num_arrow', 'sig_aux_bus_arrow_left', 'sig_aux_bus_arrow_right', 'sig_aux_bus', 'sig_aux_right_forward_arrow', 'overexposed']
+
+        # GERALD-cropped, >=129-instance class subset (31 classes, remapped to contiguous
+        # category IDs 1-31 in instances_{train,val,test}2017_ge129.json)
+        # self.dataset.class_names = ['Hectometer_Sign', 'Hp_0_HV', 'Hp_0_Ks', 'Hp_0_Sh', 'Hp_1', 'Hp_2', 'Ks_1', 'Ks_2', 'Lf_6', 'Lf_7', 'Mast_Sign_WRW', 'Mast_Sign_Y_Triangle', 'Ne_2', 'Ne_3_1', 'Ne_3_2', 'Ne_3_3', 'Ne_5', 'Platform_Display', 'Platform_Text_Sign', 'Platform_Track_Sign', 'Platform_Warn_Sign', 'Sign_Back', 'Signal_Back', 'Signal_Identifier_Sign', 'Signal_Off', 'Traffic_Sign', 'Vr_0', 'Vr_1', 'Vr_2', 'Zs_3', 'Zs_Off']
 
         # Percept (33 classes)
         # self.dataset.class_names = ['obs_animal', 'obs_bus', 'obs_car', 'obs_cyclist', 'obs_motorcyclist', 'obs_person', 'obs_stroller', 'obs_tram', 'sig_free_left', 'sig_free_right', 'sig_free_straight', 'sig_max_curve_speed', 'sig_max_speed_12', 'sig_max_speed_18', 'sig_max_speed_24', 'sig_max_speed_30', 'sig_max_speed_36', 'sig_max_speed_42', 'sig_max_speed_48', 'sig_max_speed_60', 'sig_stop', 'sig_switch_left_free', 'sig_switch_left_locked', 'sig_switch_right_free', 'sig_switch_right_locked', 'sig_switch_straight_free', 'sig_switch_straight_locked', 'sw_cross_left', 'sw_cross_right', 'sw_forward_left', 'sw_forward_right', 'sw_reverse_left', 'sw_reverse_right', 'sw_unknown']

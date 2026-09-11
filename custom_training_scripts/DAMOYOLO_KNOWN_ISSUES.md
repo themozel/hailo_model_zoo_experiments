@@ -69,6 +69,24 @@ GERALD-cropped classes with >=129 instances (see
 (`/data/GERALD`, `/data/percept` = bind-mounted
 `/home/amo/zeus-training/master_thesis/data/{GERALD,percept}`.)
 
+Add these to train/eval on Zeus-cropped (used by
+`damoyolo_tinynasL{20_T,25_S,35_M}.py`, which have their Zeus-cropped block
+active — see below):
+
+```python
+        'zeus_cropped_coco_train': {
+            'img_dir': '/data/zeus-cropped/images',
+            'ann_file': '/data/zeus-cropped/annotations/instances_train2017.json'
+        },
+        'zeus_cropped_coco_val': {
+            'img_dir': '/data/zeus-cropped/images',
+            'ann_file': '/data/zeus-cropped/annotations/instances_val2017.json'
+        },
+```
+
+(`/data/zeus-cropped` = bind-mounted
+`/home/amo/zeus-training/master_thesis/data/zeus-cropped`.)
+
 ## 2. Exp configs (already applied to all 3: `damoyolo_tinynasL20_T.py`,
 `damoyolo_tinynasL25_S.py`, `damoyolo_tinynasL35_M.py`)
 
