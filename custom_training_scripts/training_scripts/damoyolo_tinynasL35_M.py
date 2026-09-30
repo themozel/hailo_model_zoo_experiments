@@ -8,7 +8,9 @@ from damo.config import Config as MyConfig
 class Config(MyConfig):
     def __init__(self):
         super(Config, self).__init__()
-
+        
+        # adjust for each dataset, e.g. GERALD, Percept, Percept-cropped, GERALD-cropped, Zeus-cropped
+        self.miscs.output_dir = '/data/zeus-cropped/'
         self.miscs.exp_name = os.path.split(
             os.path.realpath(__file__))[1].split('.')[0]
         self.miscs.eval_interval_epochs = 10
@@ -29,7 +31,7 @@ class Config(MyConfig):
         self.train.no_aug_epochs = 16
         self.train.warmup_epochs = 5
         self.train.total_epochs = 200
-        self.train.finetune_path = '/workspace/DAMO-YOLO/damoyolo_tinynasL20_T_418.pth'
+        self.train.finetune_path = '/workspace/DAMO-YOLO/damoyolo_tinynasL35_M_487.pth'
 
         # augment
         # GERALD
@@ -79,14 +81,14 @@ class Config(MyConfig):
 
         # backbone
         structure = self.read_structure(
-            './damo/base_models/backbones/nas_backbones/tinynas_L20_k1kx.txt')
+            './damo/base_models/backbones/nas_backbones/tinynas_L35_kxkx.txt')
         TinyNAS = {
-            'name': 'TinyNAS_res',
+            'name': 'TinyNAS_csp',
             'net_structure_str': structure,
-            'out_indices': (2, 4, 5),
+            'out_indices': (2, 3, 4),
             'with_spp': True,
             'use_focus': True,
-            'act': 'relu',
+            'act': 'silu',
             'reparam': True,
         }
 
@@ -94,11 +96,11 @@ class Config(MyConfig):
 
         GiraffeNeckV2 = {
             'name': 'GiraffeNeckV2',
-            'depth': 1.0,
+            'depth': 1.5,
             'hidden_ratio': 1.0,
-            'in_channels': [96, 192, 384],
-            'out_channels': [64, 128, 256],
-            'act': 'relu',
+            'in_channels': [128, 256, 512],
+            'out_channels': [128, 256, 512],
+            'act': 'silu',
             'spp': False,
             'block_name': 'BasicBlock_3x3_Reverse',
         }
@@ -115,7 +117,7 @@ class Config(MyConfig):
             # 'num_classes': 33,
             # Zeus-cropped
             'num_classes': 33,
-            'in_channels': [64, 128, 256],
+            'in_channels': [128, 256, 512],
             'stacked_convs': 0,
             'reg_max': 16,
             'act': 'silu',

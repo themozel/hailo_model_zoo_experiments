@@ -8,7 +8,9 @@ from damo.config import Config as MyConfig
 class Config(MyConfig):
     def __init__(self):
         super(Config, self).__init__()
-
+        
+        # adjust for each dataset, e.g. GERALD, Percept, Percept-cropped, GERALD-cropped, Zeus-cropped
+        self.miscs.output_dir = '/data/zeus-cropped/'
         self.miscs.exp_name = os.path.split(
             os.path.realpath(__file__))[1].split('.')[0]
         self.miscs.eval_interval_epochs = 10

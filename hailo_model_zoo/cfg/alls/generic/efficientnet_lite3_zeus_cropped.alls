@@ -1,0 +1,8 @@
+input_conversion = input_conversion(bgr_to_rgb)
+norm_layer1 = normalization([127.5, 127.5, 127.5], [127.5, 127.5, 127.5])
+
+model_optimization_config(calibration, batch_size=4, calibset_size=64)
+
+performance_param(optimization_level=1)
+
+logits_layer1 = logits_layer(efficientnet_lite3_zeus_cropped/fc1, softmax, -1, cpu)
